@@ -438,7 +438,7 @@ try {
     {
         const f = fixture();
         f.boss.destId = f.tank.actor.fetchId(); f.tick(f.damage);
-        f.damage.actor.level = 49; f.damage.actor.hitting = false;
+        f.damage.actor.level = f.boss.level + 21; f.damage.actor.hitting = false;
         f.tick(f.damage);
         assert.equal(f.damage.lastDecision.action, 'raid_level_ineligible', 'overlevel bots must not attack or support this raid');
         f.damage.actor.level = 40;

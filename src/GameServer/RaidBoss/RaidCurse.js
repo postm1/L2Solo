@@ -3,7 +3,7 @@ const EffectStore = invoke('GameServer/Effects/EffectStore');
 const EffectTicker = invoke('GameServer/Effects/EffectTicker');
 const EffectRestrictions = invoke('GameServer/Effects/EffectRestrictions');
 
-const RAID_LEVEL_MAX_DIFFERENCE = 8;
+const RAID_LEVEL_MAX_DIFFERENCE = 20;
 const RAID_CURSE_SKILL_ID = 4215;
 const PETRIFICATION_SKILL_ID = 4515;
 const RAID_CURSE_DURATION_MS = 60 * 60 * 1000;

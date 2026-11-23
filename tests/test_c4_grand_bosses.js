@@ -59,7 +59,7 @@ async function main() {
             assert.equal(Rules.respawnDelayMs(id, () => 0), (hours - spread) * 3600000);
             assert.equal(Rules.respawnDelayMs(id, () => .999999), (hours + spread) * 3600000);
         }
-        assert(Curse.isAboveRaidThreshold(actor(1, 60), { fetchSelfId: () => 10001, fetchLevel: () => 40 }));
+        assert(Curse.isAboveRaidThreshold(actor(1, 61), { fetchSelfId: () => 10001, fetchLevel: () => 40 }));
         assert(!Policy.levelAllowed({ level: 60 }, 40, { npcId: 10001 }));
         const ambient = Data.npcSpawns.flatMap(a => a.spawns).filter(n => [12004, 12171, 12173].includes(n.selfId));
         assert.equal(ambient.filter(n => n.selfId === 12004).length, 25);

@@ -10,4 +10,5 @@ Each completed item below ships as its own separate local commit.
 - ADMIN_BUFF_DURATION_MS - admin full buff duration, 20 minutes by default, 1 hour by our change
 - autoloot (NpcRewards) - real player NPC drops go straight to inventory through native pickup (works in party too, the ini General.autoloot switch now has an engine consumer)
 - bAllLootForLeader - all party loot (items and Adena whole) to the real-player leader; boss_loot_leader_only - raid-boss item drops to the player leader only; both apply to player parties only (never bot-led ones)
+- bLootPenaltyLevel - the deep-blue drop penalty level gap (was hardcoded 9) now reads local.ini General.bLootPenaltyLevel (25); missing or bad value falls back to retail 9
 - README.md - never touched by our commits; doc notes about our changes live only in this file

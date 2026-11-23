@@ -4,7 +4,15 @@ const PRESETS = {
     x50: { label: 'x50', multiplier: 50 }
 };
 
-const DEEP_BLUE_LEVEL_GAP = 9;
+// The level gap where Lisvus's deep-blue drop penalty begins. local.ini's
+// bLootPenaltyLevel overrides it: above that gap the mob's drop chances
+// collapse toward nothing for the over-levelled killer. Keep the retail 9 when
+// the key is missing or malformed (0 and junk fall back, same as the profile).
+const DEEP_BLUE_LEVEL_GAP_DEFAULT = 9;
+function deepBlueLevelGapThreshold() {
+    const configured = Number(options.default?.General?.bLootPenaltyLevel);
+    return Number.isFinite(configured) && configured > 0 ? configured : DEEP_BLUE_LEVEL_GAP_DEFAULT;
+}
 const DEEP_BLUE_PENALTY_PER_LEVEL = 9;
 const DEEP_BLUE_CHANCE_DIVISOR = 3;
 // L2DropData.MAX_CHANCE is 1,000,000 in Lisvus, whose post-rounding floor is 1.
@@ -173,14 +181,15 @@ function deepBlueLevelGap(npcLevel, highestLevel) {
 // The single-killer answer of deepBlueRule without building the rule: hot
 // readers (source facts per item) only need to know whether a penalty applies.
 function deepBlueActive(npcLevel, killerLevel) {
-    return deepBlueLevelGap(npcLevel, attackerLevel(killerLevel)) >= DEEP_BLUE_LEVEL_GAP;
+    return deepBlueLevelGap(npcLevel, attackerLevel(killerLevel)) >= deepBlueLevelGapThreshold();
 }
 
 // The single-killer penaltyPercent of deepBlueRule (0 when no penalty applies),
 // without building the rule.
 function deepBluePenaltyPercent(npcLevel, killerLevel) {
     const levelGap = deepBlueLevelGap(npcLevel, attackerLevel(killerLevel));
-    return levelGap < DEEP_BLUE_LEVEL_GAP ? 0 : (levelGap - (DEEP_BLUE_LEVEL_GAP - 1)) * DEEP_BLUE_PENALTY_PER_LEVEL;
+    const gap = deepBlueLevelGapThreshold();
+    return levelGap < gap ? 0 : (levelGap - (gap - 1)) * DEEP_BLUE_PENALTY_PER_LEVEL;
 }
 
 function deepBlueRule({ npcLevel, killerLevel, attackerLevels = [] } = {}) {
@@ -189,12 +198,13 @@ function deepBlueRule({ npcLevel, killerLevel, attackerLevels = [] } = {}) {
         .filter((level) => level > 0);
     const highestLevel = levels.length > 0 ? Math.max(...levels) : 0;
     const levelGap = deepBlueLevelGap(npcLevel, highestLevel);
+    const gap = deepBlueLevelGapThreshold();
 
-    if (levelGap < DEEP_BLUE_LEVEL_GAP) {
+    if (levelGap < gap) {
         return { active: false, highestLevel, levelGap, penaltyPercent: 0, chanceMultiplier: 1, minimumChance: 0 };
     }
 
-    const penaltyPercent = (levelGap - (DEEP_BLUE_LEVEL_GAP - 1)) * DEEP_BLUE_PENALTY_PER_LEVEL;
+    const penaltyPercent = (levelGap - (gap - 1)) * DEEP_BLUE_PENALTY_PER_LEVEL;
     return {
         active: true,
         highestLevel,
@@ -293,7 +303,7 @@ module.exports = {
     rollDropAmount,
     deepBlueRule,
     deepBlueActive,
-    DEEP_BLUE_LEVEL_GAP,
+    get DEEP_BLUE_LEVEL_GAP() { return deepBlueLevelGapThreshold(); },
     deepBluePenaltyPercent,
     rewardGroupRoll,
     scaleAmount,

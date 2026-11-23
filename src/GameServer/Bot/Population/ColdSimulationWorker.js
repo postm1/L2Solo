@@ -28,7 +28,7 @@ const stubs = new Map([
         }
     })],
     ['GameServer/Effects/EffectStore', {
-        BUFF_LIMIT: 20,
+        BUFF_LIMIT: 30,
         DEBUFF_RESERVED_SLOTS: 4,
         includedInBuffCount: (effect) => effect?.type !== 'debuff'
             && effect?.type !== 'item_passive'

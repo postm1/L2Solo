@@ -138,12 +138,12 @@ assert.deepStrictEqual(EffectStore.list(stacked).map((entry) => entry.key), ['bl
 assert.strictEqual(stacked.activeBuffs.sprint, undefined, 'stack replacement must clear the displaced legacy marker');
 
 const cappedBuffs = { activeBuffs: {} };
-for (let index = 0; index < 21; index += 1) {
+for (let index = 0; index <= EffectStore.BUFF_LIMIT; index += 1) {
     const key = `buff_${index}`;
     cappedBuffs.activeBuffs[key] = Date.now() + 60000;
     EffectStore.apply(cappedBuffs, effect(key, 1000 + index));
 }
-assert.strictEqual(EffectStore.list(cappedBuffs, { includeDebuffs: false }).length, 20, 'C4 must retain at most twenty counted buffs');
+assert.strictEqual(EffectStore.list(cappedBuffs, { includeDebuffs: false }).length, EffectStore.BUFF_LIMIT, 'the server must retain at most BUFF_LIMIT counted buffs');
 assert.strictEqual(cappedBuffs.effects.buff_0, undefined, 'the oldest buff should be displaced when the buff bar is full');
 assert.strictEqual(cappedBuffs.activeBuffs.buff_0, undefined, 'slot eviction must clear the matching legacy marker');
 
@@ -160,7 +160,7 @@ EffectStore.apply(cappedBuffs, effect('chant_of_life', 1229, 'buff', {
     stackOrder: chantOfLife.stackOrder,
     hot: { count: 15, intervalMs: 1000, heal: 31 }
 }));
-assert.strictEqual(EffectStore.list(cappedBuffs, { includeDebuffs: false }).length, 21, 'the C4 short-buff slot must not evict an ordinary buff');
+assert.strictEqual(EffectStore.list(cappedBuffs, { includeDebuffs: false }).length, EffectStore.BUFF_LIMIT + 1, 'the C4 short-buff slot must not evict an ordinary buff');
 EffectStore.apply(cappedBuffs, effect('heart_of_paagrio', 1256, 'buff', {
     stackFamily: heartOfPaagrio.stackFamily,
     stackOrder: heartOfPaagrio.stackOrder,
@@ -170,19 +170,19 @@ assert.strictEqual(EffectStore.list(cappedBuffs).some((entry) => entry.key === '
 assert.strictEqual(EffectStore.list(cappedBuffs).some((entry) => entry.key === 'heart_of_paagrio'), true, 'the latest equal short HoT should own the shared slot');
 
 const debuffOverflow = {};
-for (let index = 0; index < 20; index += 1) {
+for (let index = 0; index < EffectStore.BUFF_LIMIT; index += 1) {
     EffectStore.apply(debuffOverflow, effect(`buff_${index}`, 2000 + index));
 }
 let overflowDebuff = null;
 for (let index = 0; index < 11; index += 1) {
     overflowDebuff = EffectStore.apply(debuffOverflow, effect(`debuff_${index}`, 3000 + index, 'debuff'));
 }
-assert.strictEqual(EffectStore.list(debuffOverflow, { includeDebuffs: false }).length, 19, 'debuffs beyond ten should consume ordinary buff slots');
+assert.strictEqual(EffectStore.list(debuffOverflow, { includeDebuffs: false }).length, EffectStore.BUFF_LIMIT - 1, 'debuffs beyond ten should consume ordinary buff slots');
 assert.strictEqual(EffectStore.list(debuffOverflow, { includeBuffs: false }).length, 11, 'overflow accounting must not silently remove the debuff itself');
 
 const statEviction = {};
 EffectStore.apply(statEviction, effect('might', 1068, 'buff', { stats: { pAtkMul: 1.15 } }));
-for (let index = 1; index < 20; index += 1) {
+for (let index = 1; index < EffectStore.BUFF_LIMIT; index += 1) {
     EffectStore.apply(statEviction, effect(`buff_${index}`, 7000 + index));
 }
 for (let index = 0; index < 11; index += 1) {

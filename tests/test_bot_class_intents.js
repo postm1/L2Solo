@@ -7,6 +7,7 @@ const Support = invoke('GameServer/Bot/AI/BotSupportPlanner');
 const Ranged = invoke('GameServer/Bot/AI/BotRangedCombatPositioning');
 const Rules = invoke('GameServer/Skills/C4SkillRules');
 const World = invoke('GameServer/World/World');
+const EffectStore = invoke('GameServer/Effects/EffectStore');
 function actor(id, classId, hp = 100, x = 0, clan = 0) {
     const a = { hp, x, effects: {}, skills: [], weapon: 'Weapon.Sword',
         fetchId: () => id, fetchClassId: () => classId, fetchHp: () => a.hp, fetchMaxHp: () => 100,
@@ -132,6 +133,6 @@ const paagrio = skill(1003, 'power_of_paagrio', { radius: 1000, effectType: 'buf
 World.user = { sessions: [overlord, clanMate, stranger].map(actor => ({ actor })) };
 assert(Support.isUsefulForTarget(clanMate, paagrio, overlord));
 assert(!Support.isUsefulForTarget(stranger, paagrio, overlord));
-for (let i = 0; i < 20; i++) clanMate.effects[`buff${i}`] = { id: 5000 + i, key: `buff${i}`, type: 'buff', expiresAt: Date.now() + 60000 };
+for (let i = 0; i < EffectStore.BUFF_LIMIT; i++) clanMate.effects[`buff${i}`] = { id: 5000 + i, key: `buff${i}`, type: 'buff', expiresAt: Date.now() + 60000 };
 assert(!Support.canPlanSupportAction(overlord, overlord, paagrio, [{ actor: overlord }]), 'unlisted clan recipient capacity still matters');
 console.log('Class intent checks passed: control, PvP support, retries, self buffs, loadout and native ally scope');

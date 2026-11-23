@@ -1,6 +1,6 @@
 const FailureLog = require('../../FailureLog');
 const DEFAULT_EFFECT_LEVEL = 1;
-const BUFF_LIMIT = 20;
+const BUFF_LIMIT = 30;
 const DEBUFF_RESERVED_SLOTS = 10;
 const SELF_PACKET_LIMIT = 30;
 const PARTY_PACKET_LIMIT = 20;

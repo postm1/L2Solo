@@ -43,7 +43,7 @@ try {
     let selected=Planner.desiredLoadout(rows,providers,context);
     for(const row of rows) {
         const keys=selected.selected.get(row.actor);
-        assert(keys.size<=20);
+        assert(keys.size<=Effects.BUFF_LIMIT);
         for(const key of ['song_of_earth','song_of_hunter','song_of_warding','dance_of_warrior','dance_of_fire','dance_of_fury']) {
             assert(keys.has(key),`${row.actor.fetchClassId()}: reserve space for ${key}`);
         }
@@ -91,7 +91,7 @@ try {
     assert.strictEqual(Planner.hasPendingAction(rows,providers),false,'finished buffing releases the pull');
     for(const r of rows) {
         const effects=Effects.list(r.actor);
-        assert(effects.filter(Effects.includedInBuffCount).length<=20);
+        assert(effects.filter(Effects.includedInBuffCount).length<=Effects.BUFF_LIMIT);
         assert(effects.some(e=>e.key==='dance_of_fury'),`after ${casts} casts, ${r.actor.fetchClassId()}: ${effects.map(e=>e.key)}`);
         assert(effects.some(e=>e.key==='song_of_hunter'));
     }
@@ -118,11 +118,11 @@ try {
     // budgeted as removable space. Even a single full recipient blocks an aura.
     const protectedTarget=member(6),other=member(6),externalRows=[protectedTarget,other];
     Effects.apply(protectedTarget.actor,{key:'might',id:1068,type:'buff',dispellable:false,durationMs:1200000});
-    for(let i=0;i<19;i++)Effects.apply(protectedTarget.actor,{key:`external_${i}`,id:8000+i,type:'buff',durationMs:1200000});
+    for(let i=0;i<Effects.BUFF_LIMIT-1;i++)Effects.apply(protectedTarget.actor,{key:`external_${i}`,id:8000+i,type:'buff',durationMs:1200000});
     const externalPlan=Planner.desiredLoadout(externalRows,[singer.actor],{});
     assert.strictEqual(externalPlan.chosen.length,0,'a party aura must not evict external effects on another member');
     Planner.reconcileLoadout(externalRows,[prophet.actor,singer.actor]);
-    assert.strictEqual(Effects.list(protectedTarget.actor).length,20,'protected effects survive cleanup');
+    assert.strictEqual(Effects.list(protectedTarget.actor).length,Effects.BUFF_LIMIT,'protected effects survive cleanup');
 
     const weak=member(17,[skill(1068,1)]),strong=member(52,[skill(1007,3)]),fighter=member(6),caster=member(43);
     const strengthPlan=Planner.desiredLoadout([fighter,caster,weak,strong],[weak.actor,strong.actor],{});
@@ -261,7 +261,7 @@ try {
             'prefer a same-strength group chant over many individual Might casts during a raid');
         assert(raidLoadout.selected.get(raidTank.actor).has('chant_of_shielding'));
         for(const r of raidRows) {
-            assert(raidLoadout.selected.get(r.actor).size<=20);
+            assert(raidLoadout.selected.get(r.actor).size<=Effects.BUFF_LIMIT);
             assert(raidLoadout.selected.get(r.actor).has('song_of_earth'));
             assert(raidLoadout.selected.get(r.actor).has('dance_of_warrior'));
         }

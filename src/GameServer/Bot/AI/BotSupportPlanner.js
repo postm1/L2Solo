@@ -361,7 +361,7 @@ function buffCapacity(target, planning = null) {
     if (planning?.capacity.has(target)) return planning.capacity.get(target);
     const effects = planningEffects(target, planning);
     const debuffCount = effects.filter((effect) => effect.type === 'debuff').length;
-    const limit = Number(EffectStore.BUFF_LIMIT) || 20;
+    const limit = Number(EffectStore.BUFF_LIMIT) || 30;
     const reservedDebuffs = Number(EffectStore.DEBUFF_RESERVED_SLOTS) || 10;
     const allowed = Math.max(0, limit - Math.max(0, debuffCount - reservedDebuffs));
     const used = effects.filter(isCountedBuff).length;

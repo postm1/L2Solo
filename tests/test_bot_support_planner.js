@@ -365,12 +365,12 @@ action = BotSupportPlanner.nextAction(fullPackageBuffer, [
 assert.strictEqual(action.skill.fetchSelfId(), 1078, 'after a successful cast, the autonomous buffer should advance to the next needed party buff without another request');
 assert.strictEqual(action.target, packageMage, 'the next planned buff should target its eligible party member');
 
-const capacitySkills = Array.from({ length: 21 }, (_, index) => (
+const capacitySkills = Array.from({ length: EffectStore.BUFF_LIMIT + 1 }, (_, index) => (
     skill(5000 + index, `Capacity Buff ${index}`, 1, `capacity_buff_${index}`, {})
 ));
 const capacityProvider = actor('CapacityBuffer', 49, capacitySkills);
 const capacityTarget = actor('CapacityTarget', 0);
-for (let index = 0; index < 20; index += 1) {
+for (let index = 0; index < EffectStore.BUFF_LIMIT; index += 1) {
     EffectStore.apply(capacityTarget, {
         key: `capacity_buff_${index}`,
         id: 6000 + index,
@@ -389,7 +389,7 @@ assert.strictEqual(
     false,
     'a full buff bar must not keep party pulling paused through an impossible support action'
 );
-EffectStore.remove(capacityTarget, 'capacity_buff_19');
+EffectStore.remove(capacityTarget, `capacity_buff_${EffectStore.BUFF_LIMIT - 1}`);
 assert.ok(
     BotSupportPlanner.nextAction(capacityProvider, [{ actor: capacityTarget, leader: true }], [capacityProvider]),
     'a missing buff should still be planned when a real buff slot is available'
@@ -399,7 +399,7 @@ const refreshingCapacitySkill = skill(5100, 'Refreshing Capacity Buff', 1, 'refr
 refreshingCapacitySkill.fetchBuffTime = () => 120000;
 const refreshingCapacityProvider = actor('RefreshingCapacityBuffer', 49, [refreshingCapacitySkill]);
 const refreshingCapacityTarget = actor('RefreshingCapacityTarget', 0);
-for (let index = 0; index < 19; index += 1) {
+for (let index = 0; index < EffectStore.BUFF_LIMIT - 1; index += 1) {
     EffectStore.apply(refreshingCapacityTarget, {
         key: `refresh_filler_${index}`,
         id: 6100 + index,
@@ -429,7 +429,7 @@ const auraCapacitySkill = {
 const auraCapacityProvider = actor('AuraCapacityBuffer', 21, [auraCapacitySkill]);
 const fullAuraMember = actor('FullAuraMember', 0);
 const freeAuraMember = actor('FreeAuraMember', 0);
-for (let index = 0; index < 20; index += 1) {
+for (let index = 0; index < EffectStore.BUFF_LIMIT; index += 1) {
     EffectStore.apply(fullAuraMember, {
         key: `aura_full_filler_${index}`,
         id: 6200 + index,
@@ -438,7 +438,7 @@ for (let index = 0; index < 20; index += 1) {
         durationMs: 10 * 60 * 1000
     });
 }
-for (let index = 0; index < 19; index += 1) {
+for (let index = 0; index < EffectStore.BUFF_LIMIT - 1; index += 1) {
     EffectStore.apply(freeAuraMember, {
         key: `aura_free_filler_${index}`,
         id: 6300 + index,
@@ -455,7 +455,7 @@ assert.strictEqual(
     null,
     'a party aura must wait when any in-range member would be evicted by the cast'
 );
-EffectStore.remove(fullAuraMember, 'aura_full_filler_19');
+EffectStore.remove(fullAuraMember, `aura_full_filler_${EffectStore.BUFF_LIMIT - 1}`);
 assert.strictEqual(
     BotSupportPlanner.nextAction(auraCapacityProvider, [
         { actor: fullAuraMember, leader: true },

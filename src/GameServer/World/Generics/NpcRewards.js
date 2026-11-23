@@ -9,6 +9,14 @@ function isBotSession(session) {
     return !!(session && (session.constructor.name === 'BotSession' || (session.accountId && session.accountId.startsWith('bot_'))));
 }
 
+// local.ini General.autoloot: a real player's NPC drops go straight through
+// the native pickup path (party split and leader loot rules included), even
+// when the player is in a party. false keeps the plain ground-drop flow.
+function isAutoLootEnabled() {
+    const flag = options.default?.General?.autoloot;
+    return flag === true || flag === 'true';
+}
+
 function awardDrop(world, session, npc, selfId, amount) {
     DataCache.fetchItemFromSelfId(selfId, (itemDetails) => {
         const stackable = utils.crushOb(itemDetails).stackable === true;
@@ -41,6 +49,15 @@ function spawnGroundDrop(world, session, npc, selfId, amount) {
         partyLootLeaderId: PartyCompanionService.groundLootOwnerId(session),
         ...(typeof lootOwner === 'string' ? { partyLootGroupKey: lootOwner } : {})
     }, (item) => {
+        if (isAutoLootEnabled() && !isBotSession(session) && session?.actor && typeof world.pickupItem === 'function') {
+            try {
+                if (world.pickupItem(session, session.actor, item) === true) {
+                    return;
+                }
+            } catch (error) {
+                utils.infoWarn('GameServer', 'Auto loot: %s', error.message);
+            }
+        }
         PartyCompanionService.queueRandomGroundPickup(session, item);
     });
 }

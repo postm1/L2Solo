@@ -11,4 +11,5 @@ Each completed item below ships as its own separate local commit.
 - autoloot (NpcRewards) - real player NPC drops go straight to inventory through native pickup (works in party too, the ini General.autoloot switch now has an engine consumer)
 - bAllLootForLeader - all party loot (items and Adena whole) to the real-player leader; boss_loot_leader_only - raid-boss item drops to the player leader only; both apply to player parties only (never bot-led ones)
 - bLootPenaltyLevel - the deep-blue drop penalty level gap (was hardcoded 9) now reads local.ini General.bLootPenaltyLevel (25); missing or bad value falls back to retail 9
+- admin-raid-bosses - new admin panel section: raid boss list sorted by level (15 per page, Prev/Next paging), green + live / red - dead, opens on the page nearest the hero level
 - README.md - never touched by our commits; doc notes about our changes live only in this file

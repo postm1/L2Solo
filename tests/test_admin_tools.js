@@ -177,6 +177,36 @@ assert.strictEqual(summonFullBuff.summonApplied.length, 20, 'an active servitor 
 assert.ok(EffectStore.list(summonBuffTarget.summon).some((effect) => effect.key === 'dance_of_warrior'), 'servitor profile should include physical music');
 assert.ok(EffectStore.list(summonBuffTarget.summon).some((effect) => effect.key === 'empower'), 'servitor profile should support magic-oriented summons too');
 
+// The full-buff-party bypass buffs every live party member with its own
+// class profile; each member's servitor follows through applyFullBuff.
+assert.ok(adminHtml.includes('admin-full-buff-party'), 'admin panel should expose the party full buff');
+assert.ok(adminHtml.includes('action="bypass admin-full-buff-party"'), 'admin party full buff should keep the menu visible while the bypass runs');
+const AdminFullBuffParty = invoke('GameServer/World/Generics/NpcBypasses/AdminFullBuffParty');
+const PartyAwareness = invoke('GameServer/Bot/AI/PartyAwareness');
+const BuffGenerics = invoke(path.actor);
+const originalPartySessions = PartyAwareness.partySessions;
+const originalCalculateStats = BuffGenerics.calculateStats;
+const originalUserInfo = ServerResponse.userInfo;
+const originalScheduleExpiry = EffectTicker.scheduleExpiry;
+const partyLeader = { isSpellcaster: () => 0, effects: {}, activeBuffs: {}, fetchId: () => 7701, fetchName: () => 'PartyLeader', statusUpdateVitals() {} };
+const partyMember = { isSpellcaster: () => 1, effects: {}, activeBuffs: {}, fetchId: () => 7702, fetchName: () => 'PartyMember', statusUpdateVitals() {} };
+const partyLeaderSession = { actor: partyLeader, dataSendToMe() {} };
+const partyMemberSession = { actor: partyMember, dataSendToMe() {} };
+PartyAwareness.partySessions = () => [partyLeaderSession, partyMemberSession];
+BuffGenerics.calculateStats = () => {};
+ServerResponse.userInfo = () => Buffer.from([0]);
+EffectTicker.scheduleExpiry = () => {};
+try {
+    AdminFullBuffParty(partyLeaderSession);
+    assert.ok(EffectStore.list(partyLeader).length > 0, 'the party full buff caster should also be buffed');
+    assert.ok(EffectStore.list(partyMember).some((effect) => effect.key === 'empower'), 'every party member should receive its own class profile');
+} finally {
+    PartyAwareness.partySessions = originalPartySessions;
+    BuffGenerics.calculateStats = originalCalculateStats;
+    ServerResponse.userInfo = originalUserInfo;
+    EffectTicker.scheduleExpiry = originalScheduleExpiry;
+}
+
 for (const rank of ['none', 'd', 'c', 'b', 'a', 's']) {
     if (rank !== 'b') assert.strictEqual(adminShop[`armor-${rank}`], `armor:${rank}`, `armor-${rank} should resolve from the live armor datapack`);
     assert.strictEqual(adminShop[`weapon-${rank}`], `weapon:${rank}`, `weapon-${rank} should resolve from the live weapon datapack`);

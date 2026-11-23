@@ -4,6 +4,7 @@ const BotLootEtiquette = invoke('GameServer/Bot/AI/BotLootEtiquette');
 const PartyCompanionService = invoke('GameServer/Bot/AI/PartyCompanionService');
 const ProgressionRates = invoke('GameServer/ProgressionRates');
 const GeodataEngine = invoke('GameServer/Geodata/GeodataEngine');
+const GrandBossRules = invoke('GameServer/RaidBoss/GrandBossRules');
 
 function isBotSession(session) {
     return !!(session && (session.constructor.name === 'BotSession' || (session.accountId && session.accountId.startsWith('bot_'))));
@@ -41,12 +42,17 @@ function spawnGroundDrop(world, session, npc, selfId, amount) {
     const landing = GeodataEngine.straightMoveEnd(npc.fetchLocX(), npc.fetchLocY(), npc.fetchLocZ(),
         Math.round(scattered.locX), Math.round(scattered.locY), npc.fetchLocZ());
     const lootOwner = PartyCompanionService.groundLootOwnerKey(session);
+    // Provenance for the boss_loot_leader_only rule (local.ini): the same
+    // raid-boss check NpcDied uses, stamped onto the drop so the loot
+    // resolver sees it even when a companion later collects it from the ground.
+    const raidBossLoot = npc.fetchIsRaidBoss?.() === true || GrandBossRules.isGrandBoss(npc);
     world.spawnItem(session, selfId, amount, {
         locX: landing.locX, locY: landing.locY, locZ: landing.locZ,
         // Ground items have no native owner metadata in this runtime. Keep a
         // lightweight provenance marker so an idle party never treats another
         // group's nearby drop as its own recovery work.
         partyLootLeaderId: PartyCompanionService.groundLootOwnerId(session),
+        ...(raidBossLoot ? { raidBossLoot: true } : {}),
         ...(typeof lootOwner === 'string' ? { partyLootGroupKey: lootOwner } : {})
     }, (item) => {
         if (isAutoLootEnabled() && !isBotSession(session) && session?.actor && typeof world.pickupItem === 'function') {

@@ -83,6 +83,13 @@ function hasOwn(object, key) {
     return Object.prototype.hasOwnProperty.call(object || {}, key);
 }
 
+// [General] config switches arrive as booleans from ini, but accept the 'true'
+// string too (same shape as the autoloot consumer in NpcRewards).
+function optionsEnabled(key) {
+    const flag = options.default?.General?.[key];
+    return flag === true || flag === 'true';
+}
+
 function normalizeDistribution(distribution) {
     if (distribution === undefined || distribution === null) return DEFAULT_PARTY_DISTRIBUTION;
     const value = Number(distribution);
@@ -1087,6 +1094,16 @@ const PartyCompanionService = {
         const members = lootMembersForLeader(leaderSession, target);
         if (!leaderSession || members.length <= 1) return looterSession;
 
+        // local.ini leader loot options apply only to a party led by a real
+        // player (player + companion bots). bAllLootForLeader sends every drop
+        // to that leader; boss_loot_leader_only sends raid-boss drops, marked
+        // at spawn by NpcRewards. Bot background parties keep their agreement.
+        if (!world().isBotSession(leaderSession)) {
+            const bossDrop = optionsEnabled('boss_loot_leader_only') &&
+                (target?.model?.raidBossLoot === true || target?.raidBossLoot === true);
+            if (optionsEnabled('bAllLootForLeader') || bossDrop) return leaderSession;
+        }
+
         const background = leaderSession.hotBackgroundPartyId
             ? invoke('GameServer/Bot/Population/BackgroundPartyState').find(leaderSession.hotBackgroundPartyId) : null;
         const agreement = background?.stats?.agreement;
@@ -1128,6 +1145,12 @@ const PartyCompanionService = {
         const members = lootMembersForLeader(leaderSession, target);
         if (!leaderSession || members.length <= 1) {
             return [{ session: looterSession, amount: total }];
+        }
+
+        // bAllLootForLeader also routes Adena whole to the real-player leader
+        // (boss_loot_leader_only stays non-Adena, matching its local.ini docs).
+        if (!world().isBotSession(leaderSession) && optionsEnabled('bAllLootForLeader')) {
+            return [{ session: leaderSession, amount: total }];
         }
 
         const share = Math.floor(total / members.length);

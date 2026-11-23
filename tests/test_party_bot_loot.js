@@ -388,6 +388,63 @@ try {
     );
     removeWorldItem(500011);
     pickupCalls[10].onComplete();
+
+    // local.ini leader loot options: the real player leader of a player+bot
+    // party may claim the party's whole loot (bAllLootForLeader, Adena whole)
+    // or every raid-boss drop (boss_loot_leader_only, non-Adena per its docs).
+    // Neither rule applies while a bot leads the party.
+    const general = global.options.default.General;
+    const savedFlags = {
+        bAllLootForLeader: general.bAllLootForLeader,
+        boss_loot_leader_only: general.boss_loot_leader_only
+    };
+    try {
+        const groundFake = {
+            partyLootLeaderId: leaderSession.actor.fetchId(),
+            fetchId: () => 500020, fetchLocX: () => 130, fetchLocY: () => 200, fetchLocZ: () => -310
+        };
+        const bossFake = { ...groundFake, fetchId: () => 500021, model: { raidBossLoot: true } };
+        leaderSession.partyCompanionSettings = { distribution: 1 };
+        Math.random = () => 0.999;
+
+        general.boss_loot_leader_only = true;
+        general.bAllLootForLeader = false;
+        assert.strictEqual(PartyCompanionService.resolveLootSession(botSession, 729, bossFake), leaderSession,
+            'raid-boss loot must go to the real-player leader under boss_loot_leader_only');
+        assert.notStrictEqual(PartyCompanionService.resolveLootSession(botSession, 729, groundFake), leaderSession,
+            'boss_loot_leader_only must not redirect ordinary party loot');
+        assert.strictEqual(PartyCompanionService.adenaAllocations(botSession, 10, bossFake).length, 3,
+            'boss_loot_leader_only is non-Adena, so raid Adena still splits party-wide');
+
+        general.bAllLootForLeader = true;
+        assert.strictEqual(PartyCompanionService.resolveLootSession(botSession, 729, groundFake), leaderSession,
+            'bAllLootForLeader sends every party drop to the player leader');
+        assert.deepStrictEqual(PartyCompanionService.adenaAllocations(botSession, 100, groundFake),
+            [{ session: leaderSession, amount: 100 }],
+            'bAllLootForLeader sends Adena whole to the player leader');
+
+        const botLeader = {
+            accountId: 'bot_background',
+            partyCompanionSettings: { distribution: 1 },
+            actor: { fetchId: () => 4, fetchLocX: () => 100, fetchLocY: () => 200, fetchIsOnline: () => true, isDead: () => false }
+        };
+        const botLooter = {
+            accountId: 'bot_worker', partyCompanion: true, followPlayerSession: botLeader, plan: 'following',
+            actor: closestBot, dataSendToMeAndOthers() {}
+        };
+        BotManager.sessions = [botLooter];
+        registerSessions([botLeader, botLooter]);
+        assert.notStrictEqual(PartyCompanionService.resolveLootSession(botLooter, 729, bossFake), botLeader,
+            'leader loot options never apply while a bot leads the party');
+    } finally {
+        BotManager.sessions = [botSession, distantBotSession];
+        registerSessions([leaderSession, botSession, distantBotSession]);
+        for (const [key, value] of Object.entries(savedFlags)) {
+            if (value === undefined) delete general[key];
+            else general[key] = value;
+        }
+        Math.random = () => 0;
+    }
 } finally {
     DataCache.fetchNpcRewardsFromSelfId = originalRewards;
     DataCache.fetchItemFromSelfId = originalFetchItem;

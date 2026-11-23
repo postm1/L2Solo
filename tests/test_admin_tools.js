@@ -139,7 +139,7 @@ assert.strictEqual(EffectStore.list(meleeBuffTarget).find((effect) => effect.key
 assert.ok(EffectStore.list(meleeBuffTarget).some((effect) => effect.key === 'song_of_hunter'), 'melee profile should include class-relevant songs');
 assert.ok(EffectStore.list(meleeBuffTarget).some((effect) => effect.key === 'dance_of_warrior'), 'melee profile should include class-relevant dances');
 assert.ok(EffectStore.list(meleeBuffTarget).some((effect) => effect.key === 'prophecy_of_fire'), 'melee profile should include Prophecy of Fire');
-assert.ok(meleeEffects.every((effect) => effect.expiresAt === fixedExpiry), 'melee profile effects should share one 20-minute expiry');
+assert.ok(meleeEffects.every((effect) => effect.expiresAt === fixedExpiry), 'melee profile effects should share one admin duration expiry');
 
 const mageBuffTarget = { isSpellcaster: () => 1, effects: {}, activeBuffs: {} };
 const mageEffects = AdminFullBuff.applyProfile({}, mageBuffTarget, 'mage', {

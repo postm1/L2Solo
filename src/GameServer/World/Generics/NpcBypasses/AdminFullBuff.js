@@ -8,7 +8,7 @@ const ClassProgression = invoke('GameServer/ClassProgression');
 const SummonControl = invoke('GameServer/Npc/SummonControl');
 const activeSkills = C4SkillRules.expandSourcedLevels(require('../../../../../data/Skills/Active/active.json'));
 
-const ADMIN_BUFF_DURATION_MS = 20 * 60 * 1000;
+const ADMIN_BUFF_DURATION_MS = 60 * 60 * 1000;
 
 const COMMON_BUFFS = [
     [1035, 4], // Mental Shield
@@ -270,7 +270,7 @@ function adminFullBuff(session) {
     const summonText = result.summonApplied.length ? ` + servitor ${result.summonApplied.length}` : '';
     session.dataSendToMe(ServerResponse.speak(actor, {
         kind: 0,
-        text: `Admin: ${result.profile} full buff applied (${result.applied.length}${summonText} effects, 20 minutes).`
+        text: `Admin: ${result.profile} full buff applied (${result.applied.length}${summonText} effects, ${Math.round(ADMIN_BUFF_DURATION_MS / 60000)} minutes).`
     }));
     return result.applied;
 }

@@ -1,8 +1,9 @@
 const Skills = require('../PrivateStoreLimits');
 
-// C4 inventory size and Expand Inventory (1372), matching ExStorageMaxCount.
+// Local C4-flavored inventory size: 120 base slots (150 for dwarves, race 4),
+// plus Expand Inventory (1372) at +6 a level, capped at level 8.
 function capacity(race, skillLevel = 0) {
-    return (Number(race) === 4 ? 100 : 80) + Math.max(0, Math.min(8, Number(skillLevel) || 0)) * 6;
+    return (Number(race) === 4 ? 150 : 120) + Math.max(0, Math.min(8, Number(skillLevel) || 0)) * 6;
 }
 
 // Bounds item request batches without excluding a fully expanded dwarf bag.

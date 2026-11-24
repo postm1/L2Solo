@@ -340,11 +340,13 @@ const defects = {
     } }, 'vitals.unaccounted'],
     // A round framed from its moment instead of the clock it credits.
     'round stamped from its moment': [{ open: (open, from, step) => open(step ? step.t : from) }, 'time.uncovered'],
-    // Loot merged past the bag: a hundred more non-stackable pieces.
+    // Loot merged past the bag: non-stackable pieces past the widest bag the
+    // limit model can ever give (base slots + a full Expand Inventory), so the
+    // breach holds however far the base slots are raised.
     'loot past the cap': [{ result: (result) => {
         if (!(result.materialize?.items || []).length || !result.patch?.inventory) return result;
         const piece = items.find((item) => item?.etc?.stackable === false || item?.template?.stackable === false);
-        const inventory = { ...result.patch.inventory, [piece.selfId]: { selfId: Number(piece.selfId), amount: 100, stackable: false } };
+        const inventory = { ...result.patch.inventory, [piece.selfId]: { selfId: Number(piece.selfId), amount: InventoryLimits.MAX_CAPACITY + 10, stackable: false } };
         return { ...result, patch: { ...result.patch, inventory } };
     } }, 'loot.slots']
 };

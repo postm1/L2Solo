@@ -88,6 +88,17 @@ function partyRewardShares(participants, exp, sp) {
         .map((share) => ({ session: participants[share.index], exp: share.exp, sp: share.sp }));
 }
 
+// General.expBossRate scales a raid boss's experience for the whole sharing
+// party, but only once a real player took part in the kill: the killer itself
+// or a party member at the corpse. Bot-only parties always keep the plain rate,
+// and a missing or malformed key means 1.
+function raidBossExpMultiplier(raidBoss, sessions) {
+    if (!raidBoss) return 1;
+    const configured = Number(options.default?.General?.expBossRate);
+    if (!Number.isFinite(configured) || configured < 0) return 1;
+    return sessions.some((memberSession) => !World.isBotSession(memberSession)) ? configured : 1;
+}
+
 function clearSweepRetry(spoilerSession, retries, npcId) {
     retries.delete(npcId);
     if (!retries.size && spoilerSession.sweepRetriesByNpcId === retries) {
@@ -215,7 +226,9 @@ function npcDied(session, actor, npc) {
         const overhit = invoke('GameServer/Progression/OverhitReward').consume(npc, actor, base.exp);
         if (overhit.eligible) session.dataSendToMe?.(invoke('GameServer/Network/Response').systemMessage(361));
         const remainingShare = PetRuntime.rewardDamage(npc, overhit.adjustedExp, base.sp);
-        rewards = partyRewardShares(participants, overhit.adjustedExp * remainingShare, base.sp * remainingShare);
+        rewards = partyRewardShares(participants,
+            overhit.adjustedExp * remainingShare * raidBossExpMultiplier(raidBoss, participants),
+            base.sp * remainingShare);
     });
 
     if (raidBoss) {
@@ -258,5 +271,6 @@ function npcDied(session, actor, npc) {
 module.exports = npcDied;
 module.exports.PARTY_EXP_SP_BONUS = PartyRewardMath.PARTY_EXP_SP_BONUS;
 module.exports.partyRewardShares = partyRewardShares;
+module.exports.raidBossExpMultiplier = raidBossExpMultiplier;
 module.exports.validPartyMembers = validPartyMembers;
 module.exports.autoSweepSpoiledCorpse = autoSweepSpoiledCorpse;

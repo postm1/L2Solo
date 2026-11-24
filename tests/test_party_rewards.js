@@ -29,4 +29,24 @@ assert.deepStrictEqual(
     'an extreme low-level passenger should be excluded by the automatic party cutoff'
 );
 
+// General.expBossRate: only raid bosses, only once a real player took part.
+const bot = { accountId: 'bot_1' };
+const player = { accountId: 'user_1' };
+const savedBossRate = options.default.General.expBossRate;
+try {
+    options.default.General.expBossRate = 0.5;
+    assert.strictEqual(NpcDied.raidBossExpMultiplier(true, [bot]), 1,
+        'a bot-only raid kill keeps the plain experience rate');
+    assert.strictEqual(NpcDied.raidBossExpMultiplier(true, [bot, player]), 0.5,
+        'a raid kill shared with a real player scales the experience of the whole party');
+    assert.strictEqual(NpcDied.raidBossExpMultiplier(false, [player]), 1,
+        'ordinary monsters are never touched by the raid boss rate');
+    delete options.default.General.expBossRate;
+    assert.strictEqual(NpcDied.raidBossExpMultiplier(true, [player]), 1,
+        'without the ini key raid boss experience stays at the plain rate');
+} finally {
+    if (savedBossRate === undefined) delete options.default.General.expBossRate;
+    else options.default.General.expBossRate = savedBossRate;
+}
+
 console.log('Party reward checks passed');

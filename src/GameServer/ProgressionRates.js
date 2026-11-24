@@ -10,7 +10,7 @@ const PRESETS = {
 // the key is missing or malformed (0 and junk fall back, same as the profile).
 const DEEP_BLUE_LEVEL_GAP_DEFAULT = 9;
 function deepBlueLevelGapThreshold() {
-    const configured = Number(options.default?.General?.bLootPenaltyLevel);
+    const configured = Number(global.options?.default?.General?.bLootPenaltyLevel);
     return Number.isFinite(configured) && configured > 0 ? configured : DEEP_BLUE_LEVEL_GAP_DEFAULT;
 }
 const DEEP_BLUE_PENALTY_PER_LEVEL = 9;

@@ -28,19 +28,32 @@ function check(actor, selfId, amount, groundItem) {
         if (reservation.stackable) stacks.add(reservation.selfId);
         load += reservation.mass * reservation.amount;
     }
-    const reason = refusal({ slots, load, limit: Limits.forActor(actor), maxLoad: actor.fetchMaxLoad?.(), held: stacks.has(selfId) },
+    const reason = refusal({ slots, load, limit: Limits.forActor(actor), maxLoad: actor.fetchMaxLoad?.(),
+        held: stacks.has(selfId), ignoreWeight: ignoreWeightFor(actor) },
         { stackable, mass, amount });
     return reason ? { reason } : { selfId, amount, stackable, mass };
 }
 
+// local.ini's bIgnoreWeightLimit speaks for real players only: an actor whose live
+// session is not a bot session. Bot bodies, cold states and far rounds match no such
+// session, so the carrying load rule keeps working for them whatever the ini says.
+function ignoreWeightFor(actor) {
+    const flag = global.options?.default?.General?.bIgnoreWeightLimit;
+    if (flag !== true && flag !== 'true') return false;
+    const World = invoke('GameServer/World/World');
+    const session = (World.user?.sessions || []).find((candidate) => candidate.actor === actor);
+    return !!session && !World.isBotSession(session);
+}
+
 // The C4 pickup rule, one for a body near a player (check) and a far round (RoundLoot.keep):
 // a drop that needs a slot past the bag's limit, or with mass past its carrying load, stays on
-// the ground. bag: { slots, load, limit, maxLoad, held: a stack of the drop is in the bag };
-// drop: { stackable, mass, amount }. Returns why it stays ('slots', 'weight'), null when it fits.
-function refusal({ slots, load, limit, maxLoad, held }, { stackable, mass, amount }) {
+// the ground. bag: { slots, load, limit, maxLoad, held: a stack of the drop is in the bag,
+// ignoreWeight: the owner is a real player with the ini switch on }; drop: { stackable, mass,
+// amount }. Returns why it stays ('slots', 'weight'), null when it fits.
+function refusal({ slots, load, limit, maxLoad, held, ignoreWeight }, { stackable, mass, amount }) {
     if (slots + (stackable ? Number(!held) : amount) > limit) return 'slots';
     // Weightless drops (notably Adena) do not worsen an existing overload.
-    if (mass > 0 && Number.isFinite(maxLoad) && load + mass * amount > maxLoad) return 'weight';
+    if (!ignoreWeight && mass > 0 && Number.isFinite(maxLoad) && load + mass * amount > maxLoad) return 'weight';
     return null;
 }
 

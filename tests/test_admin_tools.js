@@ -499,6 +499,75 @@ async function assertSetOwnLevelUpdatesRuntimeActor() {
     EffectTicker.clearAll(actor);
 }
 
+// The admin raid boss page: a level-sorted catalog, 15 rows a page, a green +
+// for a live boss and a red - for a dead one, and it opens nearest the hero.
+assert.ok(adminHtml.includes('admin-raid-bosses'), 'the admin panel should expose the raid boss list');
+const AdminRaidBosses = invoke('GameServer/World/Generics/NpcBypasses/AdminRaidBosses');
+const RaidBossSourceCatalog = invoke('GameServer/RaidBoss/RaidBossSourceCatalog');
+const originalCatalogAll = RaidBossSourceCatalog.all;
+const originalLiveTemplateIds = RaidBossSourceCatalog.liveTemplateIds;
+const originalNpcHtml = ServerResponse.npcHtml;
+try {
+    const catalog = Array.from({ length: 37 }, (_, index) => ({
+        raidBossTemplateId: 1000 + index,
+        name: `Boss ${index + 1}`,
+        avgLevel: index + 1,
+        center: { locX: 10000 + index, locY: 20000, locZ: -3000 }
+    }));
+    catalog.splice(5, 0, { ...catalog[4] }); // several spawn points of one boss
+    RaidBossSourceCatalog.all = () => catalog;
+    RaidBossSourceCatalog.liveTemplateIds = () => new Set([1016]); // Boss 17 lives
+    let rendered = '';
+    ServerResponse.npcHtml = (objectId, html) => { rendered = html; return Buffer.from([1]); };
+    const pageSession = { actor: { fetchLevel: () => 20 }, dataSendToMe() {} };
+
+    AdminRaidBosses(pageSession);
+    assert.ok(rendered.startsWith('<html><body>') && rendered.endsWith('</body></html>'),
+        'the client only renders a full html document body, or the window stays empty');
+    assert.ok(rendered.includes('(page 2 of 3)'), 'the list should open on the page nearest the hero level');
+    assert.ok(rendered.includes('[20]</font>&nbsp;Boss 20'), 'the nearest page should contain the same-level boss');
+    assert.ok(!rendered.includes('[35]</font>&nbsp;Boss 35'), 'a neighbouring page must not render its rows');
+    assert.ok(rendered.includes('<font color="00A000">[17]</font>'),
+        'a live boss should show a green level');
+    assert.ok(rendered.includes('<font color="C80000">['),
+        'a dead boss should show a red level');
+    assert.ok(!rendered.includes('>+&nbsp;') && !rendered.includes('>-&nbsp;'),
+        'the level colour alone should mark the live state, without a plus or minus sign');
+    assert.ok(rendered.includes('(page 2 of 3)</td><td align="right">'
+        + '<a action="bypass -h html Admin/main">Back to menu</a>'),
+        'the header row should carry the page count and the menu return link');
+    assert.ok(rendered.includes('admin-raid-bosses 1">Prev') && rendered.includes('admin-raid-bosses 3">Next')
+        && rendered.includes('admin-raid-bosses 3">Last'),
+        'the page should link left, right and to the last page');
+    assert.ok(!rendered.includes('Nearest'), 'the page should offer only Prev, Next and Last');
+    assert.ok(rendered.includes('<td><font color="00A000">[17]</font>&nbsp;Boss 17</td>'
+        + '<td align="right"><a action="bypass -h admin-raid-bosses tp 1016">[TP]</a></td>'),
+        'every row should show the coloured level, with the spawn teleport flush to the right edge');
+
+    const ActorGenerics = invoke(path.actor);
+    const originalTeleportTo = ActorGenerics.teleportTo;
+    const teleports = [];
+    ActorGenerics.teleportTo = (teleportSession, teleportActor, coords) => teleports.push(coords);
+    try {
+        AdminRaidBosses(pageSession, ['admin-raid-bosses', 'tp', '1019']);
+        assert.deepStrictEqual(teleports, [{ locX: 10019, locY: 20000, locZ: -3000, head: 0 }],
+            'the [TP] button should move the hero to the boss spawn point');
+        AdminRaidBosses(pageSession, ['admin-raid-bosses', 'tp', '424242']);
+        assert.strictEqual(teleports.length, 1, 'an unknown boss template must not teleport anyone');
+    } finally {
+        ActorGenerics.teleportTo = originalTeleportTo;
+    }
+
+    AdminRaidBosses(pageSession, ['admin-raid-bosses', '1']);
+    assert.ok(rendered.includes('(page 1 of 3)'), 'an explicit page argument should win');
+    assert.strictEqual((rendered.match(/\[5\]<\/font>&nbsp;Boss 5/g) || []).length, 1,
+        'one boss with several spawn points should be listed once');
+} finally {
+    RaidBossSourceCatalog.all = originalCatalogAll;
+    RaidBossSourceCatalog.liveTemplateIds = originalLiveTemplateIds;
+    ServerResponse.npcHtml = originalNpcHtml;
+}
+
 assertSetOwnLevelUpdatesRuntimeActor()
     .then(() => {
         console.log('Admin tool checks passed');
